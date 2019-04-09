@@ -1,79 +1,126 @@
-with Ada.Text_IO, Ada.Unchecked_Deallocation ;
+with Ada.Exceptions;  use Ada.Exceptions;
+with Ada.Text_IO ;
 
 package body Kirkman is
 
-    package Txt renames Ada.Text_IO ;
-    procedure Liberer is new Ada.Unchecked_Deallocation (Cellule, Liste) ;
+    function "="(G, D : in Personne) return Boolean is
+    begin
+        if not (G.Defini and D.Defini) then
+            raise Personne_indefinie;
+        else
+            return G.Numero = D.Numero;
+        end if;
+    end "=";
+
+    function "<"(G, D : in Personne) return Boolean is
+    begin
+        if not (G.Defini and D.Defini) then
+            raise Personne_indefinie;
+        else
+            return G.Numero < D.Numero;
+        end if;
+    end "<";
+
+    function "<="(G, D : in Personne) return Boolean is
+    begin
+        return (G < D) or (G = D);
+    end "<=";
+
+    function ">"(G, D : in Personne) return Boolean is
+    begin
+        return not (G <= D);
+    end ">";
+
+    function ">="(G, D : in Personne) return Boolean is
+    begin
+        return (G > D) or (G = D);
+    end ">=";
+
+    function PersonneImage(P : in Personne) return String is
+    begin
+        if not P.Defini then
+            return " ??";
+        elsif P.Numero < 10 then
+            return " " & Integer'Image(P.Numero);
+        else
+            return Integer'Image(P.Numero);
+        end if;
+    end PersonneImage;
     
-    function Est_Vide (L : in Liste) return Boolean is
-    begin
-        return L = null ;
-    end Est_Vide ;
+    package Txt renames Ada.Text_IO;
 
-    procedure Init (L : in out Liste) is
+    procedure AfficherPersonne(P : in Personne) is
     begin
-        if not Est_Vide (L) then
-            if Est_Vide (L.all.Suiv) then
-                Liberer (L) ;
-            else
-                Init (L.all.Suiv) ;
-            end if ;
-        end if ;
-    end Init ;
+        Txt.Put(PersonneImage(P));
+    end AfficherPersonne;
 
-    function Appartient (E : in Personne ; L : in Liste) return Boolean is
-        Resultat : Boolean ;
+    procedure AfficherRang(R : in Rang) is
     begin
-        if Est_Vide (L) then
-            Resultat := False ;
+        Txt.Put("(");
+        for Indice in R'Range loop
+            Txt.Put(PersonneImage(R(Indice)));
+            if Indice /= R'Last then
+                Txt.Put(",");
+            end if;
+        end loop;
+        Txt.Put(")");
+    end AfficherRang;
+
+    procedure AfficherJour(J : in Jour) is
+    begin
+        for Indice in J'Range loop
+            Txt.Put("Rang" & Integer'Image(Indice) & " : ");
+            AfficherRang(J(Indice));
+            Txt.New_Line;
+        end loop;
+    end AfficherJour;
+
+    procedure AfficherSemaine(S : in Semaine) is
+    begin
+        for Indice in S'Range loop
+            Txt.Put_Line("Jour" & Integer'Image(Indice) & " :");
+            AfficherJour(S(Indice));
+            if Indice /= S'Last then
+                Txt.New_Line;
+            end if;
+        end loop;
+    end AfficherSemaine;
+
+    procedure RetenirRencontre(P1, P2 : in Personne; CG : in out ConnaissancesGroupe) is
+    begin
+        if not (P1.Defini and P2.Defini) then
+            raise Personne_indefinie;
         else
-            if L.all.Info = E then
-                Resultat := True ;
-            else
-                Resultat := Appartient (E, L.all.Suiv) ;
-            end if ;
-        end if ;
+            EP.Inserer(P1, CG(P2.Numero));
+            EP.Inserer(P2, CG(P1.Numero));
+        end if;
+    end RetenirRencontre;
 
-        return Resultat ;
-    end Appartient ;
-
-    procedure Inserer (E : in Personne ; L : in out Liste) is
-        Nouveau : Liste ;
+    procedure RetenirRencontresRang(R : in Rang; CG : in out ConnaissancesGroupe) is
     begin
-        if Est_Vide (L) then
-            L := new Cellule'(E, null) ;
-        elsif not Appartient (E, L) then
-            if L.all.Info > E then
-                Nouveau := new Cellule'(E, L) ;
-                L := Nouveau ;
-            else
-                Inserer (E, L.all.Suiv) ;
-            end if ;
-        end if ;
-    end Inserer ;
+        for Indice1 in R'Range loop
+            for Indice2 in Indice1+1..R'Last loop
+                RetenirRencontre(R(Indice1), R(Indice2), CG);
+            end loop;
+        end loop;
+    end RetenirRencontresRang;
 
-    procedure Supprimer (E : in Personne ; L : in out Liste) is
-       Temporaire : Liste ;
+    procedure RetenirRencontresJour(J : in Jour; CG : in out ConnaissancesGroupe) is
     begin
-        if Est_Vide (L) then
-            raise Liste_Vide ;
-        elsif L.all.Info = E then
-            Temporaire := L ;
-            L := L.all.Suiv ;
-            Liberer (Temporaire) ;
-        elsif not Est_Vide (L.all.Suiv) then
-            Supprimer (E, L.all.Suiv) ;
-        end if ;
-    end Supprimer ;
+        for Indice in J'Range loop
+            RetenirRencontresRang(J(Indice), CG);
+        end loop;
+    end RetenirRencontresJour;
 
-    procedure Afficher (L : in Liste) is
+    procedure AfficherCG(CG : in ConnaissancesGroupe) is
     begin
-        if Est_Vide (L) then
-            Txt.Put_Line (" null") ;
-        else
-            Txt.Put (Integer'Image (L.all.Info) & " ->") ;
-            Afficher (L.all.Suiv) ;
-        end if ;
-    end Afficher ;
+        for Indice in CG'Range loop
+            Txt.Put("Le");
+            if Indice < 10 then
+                Txt.Put(" ");
+            end if;
+            Txt.Put_Line(Integer'Image(Indice) & " a vu :" & EP.ToString(CG(Indice)));
+        end loop;
+    end AfficherCG;
 
 end Kirkman ;

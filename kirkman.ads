@@ -1,40 +1,46 @@
+with Ensembles;
+
+generic
+
+    Taille_du_groupe, Taille_de_rang, Nombre_de_jours : Positive;
+
 package Kirkman is
 
-    Taille_du_groupe : Positive := 15 ;
-    Taille_de_rang : Positive := 3 ;
-    Nombre_de_jours : Positive := 7 ;
+    Nombre_de_rangs : Positive := Taille_du_groupe / Taille_de_rang;
 
-    Nombre_de_rangs : Positive := Taille_du_groupe / Taille_de_rang ;
+    subtype Numero_Personne is Positive range 1..Taille_du_groupe;
 
-    subtype Personne is Positive range 1..Taille_du_groupe ;
-    type Rang is array (Positive range 1..Taille_de_rang) of Personne ;
-    type Jour is array (Positive range 1..Nombre_de_rangs) of Rang ;
-    type Semaine is array (Positive range 1..Nombre_de_jours) of Jour ;
+    Personne_indefinie : exception;
 
-    type Liste is limited private ;
-    type Listes is array (Positive range 1..Taille_du_groupe) of Liste ;
+    type Personne is record
+        Numero : Numero_Personne;
+        Defini : Boolean := False;
+    end record;
+    type Rang is array (Positive range 1..Taille_de_rang) of Personne;
+    type Jour is array (Positive range 1..Nombre_de_rangs) of Rang;
+    type Semaine is array (Positive range 1..Nombre_de_jours) of Jour;
 
-    function Est_Vide (L : in Liste) return Boolean ;
+    function "="(G, D : in Personne) return Boolean;
+    function "<"(G, D : in Personne) return Boolean;
+    --function ">"(G, D : in Personne) return Boolean;
+    --function "<="(G, D : in Personne) return Boolean;
+    --function ">="(G, D : in Personne) return Boolean;
 
-    procedure Init (L : in out Liste) ;
+    function PersonneImage(P : in Personne) return String;
 
-    function Appartient (E : in Personne ; L : in Liste) return Boolean ;
+    procedure AfficherPersonne(P : in Personne);
+    procedure AfficherRang(R : in Rang);
+    procedure AfficherJour(J : in Jour);
+    procedure AfficherSemaine(S : in Semaine);
 
-    procedure Inserer (E : in Personne ; L : in out Liste) ;
+    package EP is new Ensembles(Personne, "=", "<", PersonneImage);
 
-    procedure Supprimer (E : in Personne ; L : in out Liste) ;
+    type ConnaissancesGroupe is array (Numero_Personne) of EP.Ensemble;
 
-    procedure Afficher (L : in Liste) ;
+    procedure RetenirRencontre(P1, P2 : in Personne; CG : in out ConnaissancesGroupe);
+    procedure RetenirRencontresRang(R : in Rang; CG : in out ConnaissancesGroupe);
+    procedure RetenirRencontresJour(J : in Jour; CG : in out ConnaissancesGroupe);
 
-    Liste_Vide : exception ;
+    procedure AfficherCG(CG : in ConnaissancesGroupe);
 
-private
-
-    type Cellule ;
-    type Liste is access Cellule ;
-    type Cellule is record
-        Info : Personne ;
-        Suiv : Liste ;
-    end record ;
-
-end Kirkman ;
+end Kirkman;
